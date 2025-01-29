@@ -1,0 +1,35 @@
+
+Overview 
+
+    SMesh runs on any linux distribution with a wireless device that
+    supports ad-hoc (ibss) mode. Binaries are currently available for
+    x86, mips, and arm processors, and supports wireless routers like
+    the Linksys WRT54G family.  SMesh can operate in three modes:
+
+    1. OVERLAY MODE:  Data packets are routed through SMesh process, and 
+       protocols like overlay multicast for redundant multipath are
+       available for lossless, fast handoff.  In some slow processors like
+       in the Linksys WRT54, the bandwidth due to CPU usage is limited
+       to a couple of Mbps.  The kernel should have CONFIG_FILTER
+       enabled when using this mode (although not required) for better
+       performance.
+
+    2. KERNEL SHORTEST PATH MODE:  SMesh manages the network topology and
+       the clients, but data packets are routed through the kernel.
+       This mode utilizes almost no CPU, and works with unmodified kernel
+       in most linux-based systems.  While fast-handoff techniques
+       are employed in this mode, overlay multicast is not available,
+       which may sometimes result in some loss during handoff.  The full
+       speed of the network is attainable in this mode when using low
+       cost routers (No CPU limitation).  We recommend using this mode
+       by default, before attempting other modes. 
+
+    3. KERNEL REDUNDANT MULTIPATH MODE:  SMesh manages the network
+       topology and the clients, and data packets are routed through
+       the kernel.  This mode utilizes almost no CPU.  It employs overlay
+       multicast inside the mesh through the kernel.  The SMesh iptables
+       kernel patch and modules are needed for this mode to work
+       (available through our website).  The full speed of the network
+       is attainable in this mode when using low cost routers.
+
+
