@@ -286,4 +286,14 @@ FORM {
 HR {
 	COLOR: #5168a0
 }
+
+/* Add these at the end of your stylesheet */
+.dsnlogo, .leftside {
+    color: white;
+}
+
+hr {
+    color: white;
+}
+
 </STYLE>
