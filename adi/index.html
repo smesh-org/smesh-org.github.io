@@ -1,0 +1,633 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+
+<head>
+<style type='text/css'>
+body {
+/*        font-family: 'Lucida Grande',Geneva,Arial,Verdana,sans-serif;*/
+        font-family: Verdana,arial,sans-serif;
+        font-size: 12px;
+        background: #FFFFFF;
+		margin-left: 20px;
+		margin-top: 20px;
+		margin-bottom: 20px;
+}
+
+pre {
+	margin-left: 50px;
+	margin-right: 50px;
+	padding: 10px;
+	background: #DDDDDD;
+}
+
+div.author {
+	font-style: italic;
+	font-size: 11px;
+	padding-bottom: 20px;
+	padding-top: 5px;
+}
+
+div.title {
+	font-size: 24px;
+	font-weight: bold;
+}
+
+</style>
+
+    <title>SMesh on ADI Pronghorn</title>
+    <meta name="KEYWORDS" content="smesh, pronghorn, adi, adi engineering, openwrt, kamikaze, mesh networks, mesh network, cnds, dsn, jhu, raluca, nilo, raluca musaloiu, nilo rivera, musaloiu-elefteri, musaloiu-e."/>
+</head>
+
+<body>
+<div class="title">SMesh on ADI Pronghorn</div>
+<div class="author">by <a href="http://cs.jhu.edu/~ralucam/">Raluca Musaloiu-E.</a><br/>Last update: July 18, 2009</div>
+This is step-by-step tutorial on how to install and run <a href="http://smesh.org">SMesh</a> on a <a href="http://www.adiengineering.com/php-bin/ecomm4/productDisplay.php?product_id=79">Pronghorn SBC</a> dual-radio wireless router, from <a href="http://www.adiengineering.com">ADI Engineering</a>. Generic instructions for setting up SMesh can be found in the <a href="README">README</a> from the SMesh <a href="http://smesh.org/software.html">distribution</a>.
+<p/>
+SMesh relies on kernel options that are not enabled in the images provided by <a href="ftp://ftp.adiengineering.com/Archive/PronghornSBC/Linux/OpenWrt/R103/">ADI Engineering</a> or <a href="http://downloads.openwrt.org/kamikaze/8.09.1/ixp4xx/">OpenWrt</a>. I started with the latest <a href="http://openwrt.org">OpenWrt</a> distribution, <a href="http://downloads.openwrt.org/kamikaze/8.09.1/kamikaze_8.09.1_source.tar.bz2">Kamikaze 8.09.1</a>, and I compiled new images, enabling these options in the kernel:
+<div style="float:left; padding-right: 20px; font-style:italic;">
+IP: policy routing<br/>
+IP: equal cost multipath<br/>
+"mark" match support<br/>
+"MARK" target support<br/>
+Packet filtering<br/>
+"ttl" match support<br/>
+TTL target support<br/>
+</div>
+<div>
+CONFIG_IP_MULTIPLE_TABLES<br/>
+CONFIG_IP_ROUTE_MULTIPATH<br/>
+CONFIG_NETFILTER_XT_MATCH_MARK<br/>
+CONFIG_NETFILTER_XT_TARGET_MARK<br/>
+CONFIG_IP_NF_FILTER<br/>
+CONFIG_IP_NF_MATCH_TTL<br/>
+CONFIG_IP_NF_TARGET_TTL<br/>
+</div>
+<p/>
+Here's the entire <a href=".config">kernel configuration</a> file.
+
+<h2>1. Flashing the firmware</h2>
+
+Download the <a href="openwrt-ixp4xx-squashfs.img">rootfs</a> and <a href="openwrt-pronghorn-zImage">kernel</a> images (or <a href="openwrt-pronghornmetro-zImage">this</a> for Pronghorn Metro). I'm using a serial cable made using ADI Engineering's <a href="ftp://ftp.adiengineering.com/Archive/PronghornSBC/Documents/PronghornSBCSerialCableDiagrams.pdf">wiring scheme</a>.
+
+<p/>
+Power the box and follow these steps once you get to the Redboot prompt:
+
+<pre>
++No devices on IDE controller 0
+
+Trying NPE-B...success. Using NPE-B with PHY 0.
+... waiting for BOOTP information
+Ethernet eth0: MAC address 00:08:a2:03:78:bc
+IP: 128.220.221.78/255.255.255.0, Gateway: 128.220.221.1
+Default server: 0.0.0.0
+
+RedBoot(tm) bootstrap and debug environment [ROM]
+Red Hat certified release, version 3.30 - built 17:12:29, May  2 2007
+
+Platform: ADI Engineering Pronghorn Wifi Router (IXP42X 266MHz) BE
+Copyright (C) 2000, 2001, 2002, 2003, 2004 Red Hat, Inc.
+
+RAM: 0x00000000-0x04000000, [0x00029b60-0x03fc1000] available
+FLASH: 0x50000000 - 0x50400000, 32 blocks of 0x00020000 bytes each.
+RedBoot> <strong>fis unlock -f 0x50000000 -l 0x3fffff</strong>
+... Unlock from 0x50000000-0x503fffff: ................................
+RedBoot> <strong>fis init -f</strong>
+About to initialize [format] FLASH image system - continue (y/n)? y
+*** Initialize FLASH Image System
+... Erase from 0x50060000-0x503c0000: ...........................
+... Erase from 0x503e0000-0x503e0000:
+... Unlock from 0x503e0000-0x50400000: .
+... Erase from 0x503e0000-0x50400000: .
+... Program from 0x03fe0000-0x04000000 at 0x503e0000: .
+... Lock from 0x503e0000-0x50400000: .
+RedBoot> <strong>fis list</strong>
+Name              FLASH addr  Mem addr    Length      Entry point
+RedBoot           0x50000000  0x50000000  0x00060000  0x00000000
+RedBoot config    0x503C0000  0x503C0000  0x00001000  0x00000000
+FIS directory     0x503E0000  0x503E0000  0x00020000  0x00000000
+RedBoot> <strong>load -r -b %{FREEMEMLO} openwrt-pronghorn-zImage -m ymodem</strong>
+CRaw file loaded 0x00029c00-0x0011f447, assumed entry at 0x00029c00
+xyzModem - CRC mode, 7859(SOH)/0(STX)/0(CAN) packets, 4 retries
+RedBoot> <strong>fis cre linux</strong>
+... Erase from 0x50060000-0x50160000: ........
+... Program from 0x00029c00-0x0011f448 at 0x50060000: ........
+... Unlock from 0x503e0000-0x50400000: .
+... Erase from 0x503e0000-0x50400000: .
+... Program from 0x03fe0000-0x04000000 at 0x503e0000: .
+... Lock from 0x503e0000-0x50400000: .
+RedBoot> <strong>fis list</strong>
+Name              FLASH addr  Mem addr    Length      Entry point
+RedBoot           0x50000000  0x50000000  0x00060000  0x00000000
+linux             0x50060000  0x00029C00  0x00100000  0x00029C00
+RedBoot config    0x503C0000  0x503C0000  0x00001000  0x00000000
+FIS directory     0x503E0000  0x503E0000  0x00020000  0x00000000
+RedBoot> <strong>load -r -b %{FREEMEMLO} openwrt-ixp4xx-squashfs.img -m ymodem</strong>
+CRaw file loaded 0x00029c00-0x00169bff, assumed entry at 0x00029c00
+xyzModem - CRC mode, 10242(SOH)/0(STX)/0(CAN) packets, 3 retries
+RedBoot> <strong>fis cre rootfs</strong>
+... Erase from 0x50160000-0x502a0000: ..........
+... Program from 0x00029c00-0x00169c00 at 0x50160000: ..........
+... Unlock from 0x503e0000-0x50400000: .
+... Erase from 0x503e0000-0x50400000: .
+... Program from 0x03fe0000-0x04000000 at 0x503e0000: .
+... Lock from 0x503e0000-0x50400000: .
+RedBoot> <strong>fis list</strong>
+Name              FLASH addr  Mem addr    Length      Entry point
+RedBoot           0x50000000  0x50000000  0x00060000  0x00000000
+linux             0x50060000  0x00029C00  0x00100000  0x00029C00
+rootfs            0x50160000  0x00029C00  0x00140000  0x00029C00
+RedBoot config    0x503C0000  0x503C0000  0x00001000  0x00000000
+FIS directory     0x503E0000  0x503E0000  0x00020000  0x00000000
+RedBoot> <strong>fis load linux</strong>
+RedBoot> <strong>exec</strong>
+
+Using base address 0x00029c00 and length 0x000f5848
+Uncompressing Linux.................................................................... done, booting the kernel.
+Linux version 2.6.26.8 (ralucam@sky2) (gcc version 4.1.2) #2 Thu Jul 16 18:48:35 EDT 2009
+CPU: XScale-IXP42x Family [690541f1] revision 1 (ARMv5TE), cr=000039ff
+Machine: ADI Engineering Pronghorn
+Memory policy: ECC disabled, Data cache writeback
+CPU0: D VIVT undefined 5 cache
+CPU0: I cache: 32768 bytes, associativity 32, 32 byte lines, 32 sets
+CPU0: D cache: 32768 bytes, associativity 32, 32 byte lines, 32 sets
+Built 1 zonelists in Zone order, mobility grouping on.  Total pages: 16256
+Kernel command line: root=/dev/mtdblock2 rootfstype=squashfs,jffs2 noinitrd console=ttyS0,115200 init=/etc/preinit
+PID hash table entries: 256 (order: 8, 1024 bytes)
+Dentry cache hash table entries: 8192 (order: 3, 32768 bytes)
+Inode-cache hash table entries: 4096 (order: 2, 16384 bytes)
+Memory: 64MB = 64MB total
+Memory: 62732KB available (1868K code, 174K data, 92K init)
+SLUB: Genslabs=12, HWalign=32, Order=0-3, MinObjects=0, CPUs=1, Nodes=1
+Mount-cache hash table entries: 512
+CPU: Testing write buffer coherency: ok
+net_namespace: 644 bytes
+NET: Registered protocol family 16
+IXP4xx: Using 16MiB expansion bus window size
+PCI: IXP4xx is host
+PCI: IXP4xx Using direct access for memory space
+PCI: bus0: Fast back to back transfers enabled
+dmabounce: registered device 0000:00:0e.0 on pci bus
+dmabounce: registered device 0000:00:0f.0 on pci bus
+NET: Registered protocol family 2
+IP route cache hash table entries: 1024 (order: 0, 4096 bytes)
+TCP established hash table entries: 2048 (order: 2, 16384 bytes)
+TCP bind hash table entries: 2048 (order: 1, 8192 bytes)
+TCP: Hash tables configured (established 2048 bind 2048)
+TCP reno registered
+NET: Registered protocol family 1
+IXP4xx Queue Manager initialized.
+squashfs: version 3.0 (2006/03/15) Phillip Lougher
+Registering mini_fo version $Id$
+JFFS2 version 2.2. (NAND) (SUMMARY)  &copy; 2001-2006 Red Hat, Inc.
+msgmni has been set to 122
+io scheduler noop registered
+io scheduler deadline registered (default)
+Serial: 8250/16550 driver $Revision: 1.90 $ 4 ports, IRQ sharing disabled
+serial8250.0: ttyS0 at MMIO 0xc8001000 (irq = 13) is a XScale
+console [ttyS0] enabled
+serial8250.0: ttyS1 at MMIO 0xc8000000 (irq = 15) is a XScale
+eth0: MII PHY 0 on NPE-B
+eth1: MII PHY 1 on NPE-C
+eth1: MII read failed
+eth1: MII read failed
+eth1: MII read failed
+eth1: MII read failed
+IXP4XX-Flash.0: Found 1 x16 devices at 0x0 in 16-bit bank
+ Intel/Sharp Extended Query Table at 0x0031
+Using buffer write method
+cfi_cmdset_0001: Erase suspend on write enabled
+Searching for RedBoot partition table in IXP4XX-Flash.0 at offset 0x3e0000
+5 RedBoot partitions found on MTD device IXP4XX-Flash.0
+Creating 5 MTD partitions on "IXP4XX-Flash.0":
+0x00000000-0x00060000 : "RedBoot"
+0x00060000-0x00160000 : "linux"
+0x00160000-0x003c0000 : "rootfs"
+mtd: partition "rootfs" set to be root filesystem
+mtd: partition "rootfs_data" created automatically, ofs=280000, len=140000
+0x00280000-0x003c0000 : "rootfs_data"
+0x003c0000-0x003c1000 : "RedBoot config"
+0x003e0000-0x00400000 : "FIS directory"
+i2c /dev entries driver
+i2c-gpio: probe failed: -19
+IXP4xx Watchdog Timer: heartbeat 60 sec
+Registered led device: pronghorn:green:status
+TCP westwood registered
+NET: Registered protocol family 17
+Bridge firewalling registered
+802.1Q VLAN Support v1.8 Ben Greear <greearb@candelatech.com>
+All bugs added by David S. Miller <davem@redhat.com>
+XScale DSP coprocessor detected.
+drivers/rtc/hctosys.c: unable to open rtc device (rtc0)
+VFS: Mounted root (squashfs filesystem) readonly.
+Freeing init memory: 92K
+Please be patient, while OpenWrt loads ...
+- preinit -
+Press CTRL-C for failsafe
+jffs2 not ready yet; using ramdisk
+mini_fo: using base directory: /
+mini_fo: using storage directory: /tmp/root
+- init -
+
+Please press Enter to activate this console. firmware: requesting NPE-B
+NPE-B: firmware's license can be found in /usr/share/doc/LICENSE.IPL
+NPE-B: firmware functionality 0x2, revision 0x2:1
+eth0: link up, 100Mbps, half-duplex, lpa 0x0081
+br-lan: Dropping NETIF_F_UFO since no NETIF_F_HW_CSUM feature.
+device eth0 entered promiscuous mode
+br-lan: port 1(eth0) entering learning state
+br-lan: topology change detected, propagating
+br-lan: port 1(eth0) entering forwarding state
+ip_tables: (C) 2000-2006 Netfilter Core Team
+nf_conntrack version 0.5.0 (1024 buckets, 4096 max)
+wlan: trunk
+ath_hal: module license 'Proprietary' taints kernel.
+ath_hal: 2009-05-08 (AR5210, AR5211, AR5212, AR5416, RF5111, RF5112, RF2413, RF5413, RF2133, RF2425, REGOPS_FUNC, XR)
+ath_rate_minstrel: Minstrel automatic rate control algorithm 1.2 (trunk)
+ath_rate_minstrel: look around rate set to 10%
+ath_rate_minstrel: EWMA rolloff level set to 75%
+ath_rate_minstrel: max segment size in the mrr set to 6000 us
+wlan: mac acl policy registered
+ath_pci: trunk
+PCI: enabling device 0000:00:0e.0 (0340 -> 0342)
+Atheros HAL provided by OpenWrt, DD-WRT and MakSat Technologies
+wifi0: 11a rates: 6Mbps 9Mbps 12Mbps 18Mbps 24Mbps 36Mbps 48Mbps 54Mbps
+wifi0: 11b rates: 1Mbps 2Mbps 5.5Mbps 11Mbps
+wifi0: 11g rates: 1Mbps 2Mbps 5.5Mbps 11Mbps 6Mbps 9Mbps 12Mbps 18Mbps 24Mbps 36Mbps 48Mbps 54Mbps
+wifi0: turboA rates: 6Mbps 9Mbps 12Mbps 18Mbps 24Mbps 36Mbps 48Mbps 54Mbps
+wifi0: turboG rates: 6Mbps 12Mbps 18Mbps 24Mbps 36Mbps 48Mbps 54Mbps
+wifi0: H/W encryption support: WEP AES AES_CCM TKIP
+ath_pci: wifi0: Atheros 5413: mem=0x48000000, irq=23
+PCI: enabling device 0000:00:0f.0 (0340 -> 0342)
+Atheros HAL provided by OpenWrt, DD-WRT and MakSat Technologies
+wifi1: 11b rates: 1Mbps 2Mbps 5.5Mbps 11Mbps
+wifi1: 11g rates: 1Mbps 2Mbps 5.5Mbps 11Mbps 6Mbps 9Mbps 12Mbps 18Mbps 24Mbps 36Mbps 48Mbps 54Mbps
+wifi1: turboG rates: 6Mbps 12Mbps 18Mbps 24Mbps 36Mbps 48Mbps 54Mbps
+wifi1: H/W encryption support: WEP AES AES_CCM TKIP
+ath_pci: wifi1: Atheros 2413: mem=0x48010000, irq=28
+jffs2_scan_eraseblock(): End of filesystem marker found at 0x0
+jffs2_build_filesystem(): unlocking the mtd device... done.
+jffs2_build_filesystem(): erasing all blocks after the end marker... done.
+mini_fo: using base directory: /
+mini_fo: using storage directory: /jffs
+
+
+
+BusyBox v1.11.2 (2009-07-15 23:59:40 EDT) built-in shell (ash)
+Enter 'help' for a list of built-in commands.
+
+  _______                     ________        __
+ |       |.-----.-----.-----.|  |  |  |.----.|  |_
+ |   -   ||  _  |  -__|     ||  |  |  ||   _||   _|
+ |_______||   __|_____|__|__||________||__|  |____|
+          |__| W I R E L E S S   F R E E D O M
+ KAMIKAZE (8.09.1, unknown) ----------------------------
+  * 10 oz Vodka       Shake well with ice and strain
+  * 10 oz Triple sec  mixture into 10 shot glasses.
+  * 10 oz lime juice  Salute!
+ ---------------------------------------------------
+root@OpenWrt:/#
+</pre>
+
+In OpenWrt the default IP for eth is 192.168.1.1. You can <em>telnet</em> to the router now. Once you change the root password, <em>telnet</em> is disabled and <em>ssh</em> is enabled. For simplicity I continued using the serial cable.
+
+<pre>
+root@OpenWrt:/# <strong>passwd</strong>
+Changing password for root
+New password:
+Bad password: too weak
+Retype password:
+Password for root changed by root
+</pre>
+
+If everything went ok, you should get something like this:
+<pre>
+root@OpenWrt:/# <strong>df -h</strong>
+Filesystem                Size      Used Available Use% Mounted on
+rootfs                    1.1M      1.1M         0 100% /
+/dev/root                 1.1M      1.1M         0 100% /rom
+mini_fo:/tmp/root         1.1M      1.1M         0 100% /tmp/root
+/dev/mtdblock3            1.3M    392.0k    888.0k  31% /jffs
+mini_fo:/jffs             1.1M      1.1M         0 100% /
+root@OpenWrt:/# <strong>ls -la</strong>
+drwxr-xr-x    5 root     root            0 Jan  1 00:00 .
+drwxr-xr-x    5 root     root            0 Jan  1 00:00 ..
+drwxr-xr-x    2 root     root          496 Jul 16  2009 bin
+drwxr-xr-x    4 root     root            0 Jan  1 00:00 dev
+drwxr-xr-x    4 root     root            0 Jan  1 00:05 etc
+drwxr-xr-x    2 root     root            0 Jan  1 00:00 home
+drwxr-xr-x    5 root     root            0 Jan  1 00:00 jffs
+drwxr-xr-x    9 root     root          488 Jul 16  2009 lib
+drwxr-xr-x    2 root     root            3 Jul 16  2009 mnt
+dr-xr-xr-x   32 root     root            0 Jan  1 00:00 proc
+drwxr-xr-x   16 root     root          145 Jul 16  2009 rom
+drwxr-xr-x    2 root     root            3 Jul 16  2009 root
+drwxr-xr-x    2 root     root          402 Jul 16  2009 sbin
+drwxr-xr-x   10 root     root            0 Jan  1 00:00 sys
+drwxr-xr-x    9 root     root            0 Jan  1 00:00 tmp
+drwxr-xr-x    6 root     root           47 Jul 16  2009 usr
+lrwxrwxrwx    1 root     root            4 Jul 16  2009 var -> /tmp
+drwxr-xr-x    2 root     root            3 Jul 16  2009 www
+</pre>
+
+<h2>2. Basic settings</h2>
+
+Remove the bridge between lan and wireless interfaces. Change the default IP to one in your network or to <em>dhcp</em> by editing the /etc/config/network file. Mine looks like this:
+
+<pre>
+root@OpenWrt:/# <strong>cat /etc/config/network</strong>
+# Copyright (C) 2006 OpenWrt.org
+
+config interface loopback
+        option ifname   lo
+        option proto    static
+        option ipaddr   127.0.0.1
+        option netmask  255.0.0.0
+
+config interface lan
+        option ifname   eth0
+        option proto    dhcp
+
+#config interface lan
+#       option ifname   eth0
+#       option type     bridge
+#       option proto    static
+#       option ipaddr   192.168.1.1
+#       option netmask  255.255.255.0
+</pre>
+
+Restart the network service:
+
+<pre>
+root@OpenWrt:/# <strong>/etc/init.d/network restart</strong>
+br-lan: port 1(eth0) entering disabled state
+eth0: link up, 100Mbps, half-duplex, lpa 0x0081
+device eth0 left promiscuous mode
+br-lan: port 1(eth0) entering disabled state
+eth0: link up, 100Mbps, half-duplex, lpa 0x0081
+udhcpc (v1.11.2) started
+'wifi0' is disabled
+'wifi1' is disabled
+'wifi0' is disabled
+Sending discover...
+'wifi1' is disabled
+root@OpenWrt:/# Sending select for 128.220.221.77...
+Lease of 128.220.221.77 obtained, lease time 21600
+udhcpc: ifconfig eth0 128.220.221.77 netmask 255.255.255.0 broadcast +
+udhcpc: setting default routers: 128.220.221.1
+udhcpc: setting dns servers: 128.220.221.1
+root@OpenWrt:/# <strong>ifconfig</strong>
+eth0      Link encap:Ethernet  HWaddr 00:08:A2:03:78:BC
+          inet addr:128.220.221.77  Bcast:128.220.221.255  Mask:255.255.255.0
+          UP BROADCAST RUNNING MULTICAST  MTU:1500  Metric:1
+          RX packets:3981 errors:0 dropped:0 overruns:0 frame:0
+          TX packets:7 errors:0 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:100
+          RX bytes:1029651 (1005.5 KiB)  TX bytes:1770 (1.7 KiB)
+
+lo        Link encap:Local Loopback
+          inet addr:127.0.0.1  Mask:255.0.0.0
+          UP LOOPBACK RUNNING  MTU:16436  Metric:1
+          RX packets:0 errors:0 dropped:0 overruns:0 frame:0
+          TX packets:0 errors:0 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:0
+          RX bytes:0 (0.0 B)  TX bytes:0 (0.0 B)
+</pre>
+
+Now we can update the packages list:
+<pre>
+root@OpenWrt:/# <strong>opkg update</strong>
+Downloading http://downloads.openwrt.org/kamikaze/8.09.1/ixp4xx/packages/Packages.gz
+Connecting to downloads.openwrt.org (195.56.146.238:80)
+Packages.gz          100% |*******************************|   142k 00:00:00 ETA
+Inflating http://downloads.openwrt.org/kamikaze/8.09.1/ixp4xx/packages/Packages.gz
+Updated list of available packages in /var/opkg-lists/snapshots
+</pre>
+
+Install <em>ip</em> and <em>iptables-mod-ipopt packages</em>. They are required for running SMesh:
+<pre>
+root@OpenWrt:/# <strong>opkg install ip iptables-mod-ipopt</strong>
+Installing ip (2.6.25-1) to root...
+Downloading http://downloads.openwrt.org/kamikaze/8.09.1/ixp4xx/packages/ip_2.6.25-1_armeb.ipk
+Connecting to downloads.openwrt.org (195.56.146.238:80)
+ip_2.6.25-1_armeb.ip 100% |*******************************| 78706  00:00:00 ETA
+Installing iptables-mod-ipopt (1.4.0-1) to root...
+Downloading http://downloads.openwrt.org/kamikaze/8.09.1/ixp4xx/packages/iptables-mod-ipopt_1.4.0-1_armeb.ipk
+Connecting to downloads.openwrt.org (195.56.146.238:80)
+iptables-mod-ipopt_1 100% |*******************************| 23847  --:--:-- ETA
+Installing kmod-ipt-ipopt (2.6.26.8-ixp4xx-1) to root...
+Downloading http://downloads.openwrt.org/kamikaze/8.09.1/ixp4xx/packages/kmod-ipt-ipopt_2.6.26.8-ixp4xx-1_armeb.ipk
+Connecting to downloads.openwrt.org (195.56.146.238:80)
+kmod-ipt-ipopt_2.6.2 100% |*******************************|  9458  --:--:-- ETA
+Configuring ip
+Configuring iptables-mod-ipopt
+Configuring kmod-ipt-ipopt
+root@OpenWrt:/#
+</pre>
+
+
+<h2>3. Running SMesh</h2>
+
+First we're going to configure the wireless interface. Here is a simple script for setting the interface in <em>adhoc mode</em> and also, in <em>monitor mode</em>. Depending of how SMesh is configured, the monitoring interface is optional.
+<pre>
+root@OpenWrt:/# <strong>cat /jffs/config.wireless</strong>
+#!/bin/sh
+wlanconfig ath0 destroy
+wlanconfig ath1 destroy
+
+wlanconfig ath0 create wlandev wifi0 wlanmode adhoc
+wlanconfig ath1 create wlandev wifi0 wlanmode monitor
+iwconfig ath0 essid smeshtest channel 6
+/sbin/ifconfig ath0 up
+/sbin/ifconfig ath1 up
+/sbin/ifconfig ath0 10.0.0.2 netmask 255.0.0.0
+</pre>
+
+Run the script. You should get something similar to this:
+<pre>
+root@OpenWrt:/# <strong>chmod a+x /jffs/config.wireless</strong>
+root@OpenWrt:/# <strong>/jffs/config.wireless</strong>
+wlanconfig: ioctl: No such device
+wlanconfig: ioctl: No such device
+ath0
+ath1
+root@OpenWrt:/# <strong>ifconfig</strong>
+ath0      Link encap:Ethernet  HWaddr 00:02:6F:44:CD:CA
+          inet addr:10.0.0.2  Bcast:10.255.255.255  Mask:255.0.0.0
+          UP BROADCAST RUNNING MULTICAST  MTU:1500  Metric:1
+          RX packets:0 errors:0 dropped:0 overruns:0 frame:0
+          TX packets:0 errors:0 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:0
+          RX bytes:0 (0.0 B)  TX bytes:0 (0.0 B)
+
+ath1      Link encap:UNSPEC  HWaddr 06-02-6F-44-CD-CA-00-00-00-00-00-00-00-00-00-00
+          UP BROADCAST RUNNING MULTICAST  MTU:1500  Metric:1
+          RX packets:1397 errors:0 dropped:1397 overruns:0 frame:0
+          TX packets:0 errors:0 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:0
+          RX bytes:272388 (266.0 KiB)  TX bytes:0 (0.0 B)
+
+eth0      Link encap:Ethernet  HWaddr 00:08:A2:03:78:BC
+          inet addr:128.220.221.77  Bcast:128.220.221.255  Mask:255.255.255.0
+          UP BROADCAST RUNNING MULTICAST  MTU:1500  Metric:1
+          RX packets:5842 errors:0 dropped:0 overruns:0 frame:0
+          TX packets:1683 errors:0 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:100
+          RX bytes:1921986 (1.8 MiB)  TX bytes:948703 (926.4 KiB)
+
+lo        Link encap:Local Loopback
+          inet addr:127.0.0.1  Mask:255.0.0.0
+          UP LOOPBACK RUNNING  MTU:16436  Metric:1
+          RX packets:40 errors:0 dropped:0 overruns:0 frame:0
+          TX packets:40 errors:0 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:0
+          RX bytes:3045 (2.9 KiB)  TX bytes:3045 (2.9 KiB)
+
+wifi0     Link encap:UNSPEC  HWaddr 00-02-6F-44-CD-CA-00-00-00-00-00-00-00-00-00-00
+          UP BROADCAST RUNNING MULTICAST  MTU:1500  Metric:1
+          RX packets:1478 errors:0 dropped:5 overruns:0 frame:69
+          TX packets:5 errors:4 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:195
+          RX bytes:246156 (240.3 KiB)  TX bytes:310 (310.0 B)
+          Interrupt:23
+
+root@OpenWrt:/# <strong>iwconfig</strong>
+lo        no wireless extensions.
+
+eth0      no wireless extensions.
+
+eth1      no wireless extensions.
+
+br-lan    no wireless extensions.
+
+wifi0     no wireless extensions.
+
+wifi1     no wireless extensions.
+
+ath0      IEEE 802.11g  ESSID:"smeshtest"  Nickname:""
+          Mode:Ad-Hoc  Frequency:2.437 GHz  Cell: 02:02:6F:44:CD:CA
+          Bit Rate:0 kb/s   Tx-Power:18 dBm   Sensitivity=1/1
+          Retry:off   RTS thr:off   Fragment thr:off
+          Encryption key:off
+          Power Management:off
+          Link Quality=0/70  Signal level=-96 dBm  Noise level=-96 dBm
+          Rx invalid nwid:1  Rx invalid crypt:0  Rx invalid frag:0
+          Tx excessive retries:0  Invalid misc:0   Missed beacon:0
+
+ath1      IEEE 802.11g  ESSID:""  Nickname:""
+          Mode:Monitor  Frequency:2.437 GHz  Access Point: 06:02:6F:44:CD:CA
+          Bit Rate:0 kb/s   Tx-Power:18 dBm   Sensitivity=1/1
+          Retry:off   RTS thr:off   Fragment thr:off
+          Encryption key:off
+          Power Management:off
+          Link Quality=0/70  Signal level=-96 dBm  Noise level=-96 dBm
+          Rx invalid nwid:0  Rx invalid crypt:0  Rx invalid frag:0
+          Tx excessive retries:0  Invalid misc:0   Missed beacon:0
+</pre>
+
+Transfer (<em>scp</em>) the SMesh binaries (<a href="spines">spines</a>, <a href="smesh_proxy">smesh_proxy</a>) and config files (<a href="smesh.conf">smesh.conf</a>, <a href="runSmesh">runSmesh</a>) to /jffs/smesh:
+<pre>
+root@OpenWrt:/jffs/smesh# <strong>ls -la</strong>
+drwxr-xr-x    2 root     root            0 Jan  1 00:13 .
+drwxr-xr-x    9 root     root            0 Jan  1 00:16 ..
+-rwxr-xr-x    1 root     root        11415 Jan  1 00:14 runSmesh
+-rwxr-xr-x    1 root     root         4799 Jan  1 00:14 smesh.conf
+-rwxr-xr-x    1 root     root       302244 Jan  1 00:13 smesh_proxy
+-rwxr-xr-x    1 root     root       196188 Jan  1 00:13 spines
+</pre>
+
+The <a href="README">README</a> file from the distribution explains various SMesh settings. In this example I set SMesh to use kernel mode 1, node autodiscovery, and not use the monitoring interface.
+<p/>
+Finally, run the <em>/jffs/smesh/runSmesh</em> script. If everything goes ok, you should see two processes, <em>spines</em> and <em>smesh_proxy</em> running:
+<pre>
+root@OpenWrt:/jffs/smesh# <strong>./runSmesh</strong>
+root@OpenWrt:/jffs/smesh# device ath0 entered promiscuous mode
+root@OpenWrt:/jffs/smesh# <strong>ps</strong>
+  PID USER       VSZ STAT COMMAND
+    1 root      1116 S    init
+    2 root         0 SW<  [kthreadd]
+    3 root         0 SW<  [ksoftirqd/0]
+    4 root         0 SW<  [events/0]
+    5 root         0 SW<  [khelper]
+   38 root         0 SW<  [kblockd/0]
+   66 root         0 SW   [pdflush]
+   67 root         0 SW   [pdflush]
+   68 root         0 SW<  [kswapd0]
+   69 root         0 SW<  [aio/0]
+  601 root         0 SW<  [mtdblockd]
+ 1854 root      1132 R    /bin/ash --login
+ 1862 root      1128 S    syslogd -C16
+ 1864 root      1108 S    klogd
+ 1876 root       592 S    /sbin/hotplug2 --override --persistent --max-children 1 --no-coldplug
+ 2317 root      1112 S    /usr/sbin/httpd -p 80 -h /www -r OpenWrt
+ 2321 root      1112 S    telnetd -l /bin/login
+ 2353 root         0 SWN  [jffs2_gcd_mtd3]
+ 2378 root      1108 S    watchdog -t 5 /dev/watchdog
+ 2386 root       892 S    /usr/sbin/dropbear -p 22
+ 2675 root      1132 S    udhcpc -t 0 -i eth0 -b -p /var/run/eth0.pid -R
+ 2763 root       948 S    /usr/sbin/dropbear -p 22
+ 2764 root      1128 S    -ash
+ 2842 root       892 S    /usr/sbin/dropbear -p 722
+ 3054 root      1308 S    <strong>/jffs/smesh/spines</strong> -l 10.0.0.2 -p 8120 -k 0 -k 1 -d 225.5.5.5 -W -M6
+ 3107 root      1208 S    <strong>/jffs/smesh/smesh_proxy</strong> -p 8120 -k 1 -mesh_if ath0 -m arp -bht 3 -uht 3
+                          -max 20 -ts 0.2 -df 0.2 -log /tmp/smesh.snapshot -dhcp 120 -igw_if eth0 -dns 128.220.221.1
+ 3112 root      1116 R    ps
+</pre>
+<h2>4. Troubleshooting</h2>
+Even though everything should go smooth, as I showed above, some problems may occur, especially if you play with a slightly different router, use different kernel or rootfs images, or experiment with various SMesh settings. Here are a few things you can check in this kind of situations.
+
+<h3>4.1 spines or smesh_proxy processes are not running</h3>
+Start by running the <em>runSmesh</em> script first. It loads the config file and attempts to run the daemons. If you don't see them, run them manually, from the command line. The commands are set in <em>/tmp/spines.exe</em> and <em>/tmp/smesh.exe</em> files. If both processes are missing, run <em>spines</em> first and then <em>smesh_proxy</em>.
+
+<pre>
+root@OpenWrt:/jffs/smesh# <strong>cat /tmp/spines.exe</strong>
+/jffs/smesh/spines -l 10.0.0.2 -p 8120 -k 0 -k 1 -d 225.5.5.5 -W  -M 6 >> /dev/null  2>> /dev/null
+
+root@OpenWrt:/jffs/smesh# <strong>cat /tmp/smesh.exe</strong>
+/jffs/smesh/smesh_proxy -p 8120 -k 1 -mesh_if ath0 -m arp -bht 3 -uht 3 -max 20 -ts 0.2 -df 0.2 -log /tmp/smesh.snapshot  -dhcp 120  -igw_if eth0   -dns 128.220.221.1  >> /dev/null  2>> /dev/null
+</pre>
+
+<h3>4.2 Connectivity problem between nodes</h3>
+
+To check the connectivity of the mesh topology, look in the <em>/tmp/spines.snapshot</em> file, which is automatically updated every 20 seconds. Here's how it looks in a simple mesh network with two nodes, <em>10.0.0.1</em> and <em>10.0.0.2</em>:
+<pre>
+root@OpenWrt:/jffs/smesh# <strong>cat /tmp/spines.snapshot</strong>
+
+Available edges:
+                10.0.0.1 -> 10.0.0.2 :: 1 | 946690924:64171
+                10.0.0.2 -> 10.0.0.1 :: 1 | 1435:123056
+
+
+Computing routing time: 46
+ROUTES:
+10.0.0.2        LOCAL NODE
+10.0.0.1 via: 10.0.0.1 dist: 1; cost: 1
+</pre>
+
+<h3>4.3 Client cannot connect or it cannot access the Internet</h3>
+
+To check the clients' connectivity, look in the <em>/tmp/smesh.snapshot</em> file, which is also updated every 20 seconds. This is how it looks when a client (<em>10.10.165.73</em>) is connected:
+<pre>
+root@OpenWrt:/jffs/smesh# <strong>cat /tmp/smesh.snapshot</strong>
+LOG FILE -- LAST LQ CHECK TIME [60980]  -- MON_MISSMATCH [0]
+
+Client Edge: 10.0.0.2 -> 10.10.165.73 : 1   DR: 13   RR: 0   RSSI: 1   Metric: 13   <strong>GS: 3</strong>   LR: 0
+</pre>
+
+In particular, look at the GS (group state) value. Value <em>3</em> means that the node is currently the access point of the client (member of the Client Data group). A value of <em>1</em> indicates that the node is only monitoring the client, being in its vicinity (member of Client Control group). At any point in time there should be at least one node with <em>GS: 3</em>. During a handoff, multiple nodes can have this value.
+
+<p/>This is how the routing table should look like. Note the route to the client. When running SMesh in <em>overlay mode</em> (as explained in the <a href="README">README</a> file), you will not see routes to the clients in the kernel routing table.
+<pre>
+root@OpenWrt:/jffs/smesh# <strong>route -n</strong>
+Kernel IP routing table
+Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
+10.0.0.1        10.0.0.1        255.255.255.255 UGH   0      0        0 ath0
+<strong>10.10.165.73    10.10.165.73    255.255.255.255 UGH   0      0        0 ath0</strong>
+128.220.221.0   0.0.0.0         255.255.255.0   U     0      0        0 eth0
+10.0.0.0        0.0.0.0         255.0.0.0       U     0      0        0 ath0
+0.0.0.0         128.220.221.1   0.0.0.0         UG    0      0        0 eth0
+</pre>
+
+<h2>5. Contact</h2>
+Enjoy. If you have problems, questions or suggestions, contact me at <a href='mailto:ralucam@cs.jhu.edu'>ralucam@cs.jhu.edu</a> or drop me a line <a href="http://twitter.com/ralucam">@ralucam</a> on Twitter.
+</body>
+</html>
