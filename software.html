@@ -1,0 +1,132 @@
+<html>
+<head><title>SMesh</title>
+<link rel="stylesheet" type="text/css" href="/gen.css" />
+</head>
+
+<body>
+
+<table>
+    <tr valign="top">
+    <td rowspan=2 width="15%" class="left_bar">
+        <!--#include virtual="/includes/side_menu.html" -->
+    </td>
+    <td width="85%" class="CENTER_DATA">
+        <!--#include virtual="smesh_menu.html" -->
+
+
+<h3>SMesh source code and binaries</h3>
+
+SMesh is licensed under the <a href="LICENSE.txt">SMesh Open-Source
+License</a>.  SMesh requires a device that runs Linux and has a 802.11
+wireless interface. We tested it on x86, Linksys WRT54G and Meraki
+routers.  <a href="http://www.smesh.org/smesh_overview.README">Here</a>
+is an overview of the operating modes of SMesh.  The latest stable
+version is 2.3.
+
+<ul>
+<li><a href="http://www.dsn.jhu.edu/download/smesh-src-v2.3.tar.gz">Source code</a></li>
+<li><a href="http://www.dsn.jhu.edu/download/smesh-bin-v2.3.tar.gz">Binaries (x86, arm, mips and mipsel)</a></li>
+</ul>
+
+If you intend to build SMesh from source, you also need to download <a href="http://www.spines.org">Spines 3.1</a> or later.
+
+<!--
+SMesh requires a computer running Linux with a 802.11 wireless
+device. SMesh has been tested in x86 and Linksys WRT54G routers. The latest stable version is 2.3.
+<br>
+The SMesh binaries can be provided upon request. Send us an email to
+smesh-at-dsn.jhu.edu.  Please include the following information:
+<p>
+- Name<br>
+- Institution/Company<br>
+- City and Country<br>
+- Platform where you intend to run SMesh (x86 or mips)<br>
+- How did you learn about SMesh!<br>
+-->
+<!--SMesh source is only available to collaborators at this point.-->
+
+<h3>SMesh Redundant Multipath kernel modules</h3>
+SMesh Redundant Multipath adds kernel support for forwarding data
+packets to the mobile client through multiple paths. CPU utilization
+decreases significantly when using SMesh with these modules, allowing
+low-cost routers to fully utilize the available bandwidth on the
+wireless networks. A user-space implementation of a routing
+protocol that uses redundant multipath, as described in our <a
+href="http://www.cnds.jhu.edu/pub/papers/smesh_kernel.pdf">paper</a>, is
+available in the <a href="http://www.spines.org">Spines</a> distribution.
+
+These modules are available under the <a
+href="http://www.gnu.org/licenses/gpl.txt">GNU GPL</a> license.
+
+<ul>
+<li><a href="/software/multipath-modules.tar.gz">Source Code</a> 
+<li><a href="/software/firmware-rmpath.tar">OpenWrt RC5 firmware with multipath kernel modules (binaries for WRT54)</a> <br>More info about OpenWrt at <a href="http://openwrt.org">www.openwrt.org</a>.
+</ul>
+
+<h3>iproute shared library</h3>
+Changing kernel routing tables from a C program requires system calls that
+are limitted and sometimes outdated when moving from one version
+of Linux to another. The common "ip route" shell command is the best
+way of manipulating routing tables in Linux. However, calling the shell
+version of the software incurs a significant overhead on low-cost routers
+(per route update, 40 ms, compared to only 1 ms when using this library on
+WRT54 routers). This library provides a direct interface to process
+the "ip route" command with the same usage as the shell version, but
+without going through the shell. This software is available under the
+<a href="http://www.gnu.org/licenses/gpl.txt">GNU GPL</a> license.
+
+<ul>
+<li><a href="/software/iproute_lib.c">Source Code</a>
+<li><a href="/software/iproute-x86/iproute_lib.so">Shared Library for x86</a> 
+<li><a href="/software/iproute-mips/iproute_lib.so">Shared Library for mips / wrt54</a>
+</ul>
+
+<h3>Supported Hardware</h3>
+<a href="http://smesh.org/adi/">SMesh on ADI Pronghorn</a> instructions.<br/>
+<a href="http://smesh.org/meraki/">SMesh on Meraki</a> instructions.
+<p/>
+Supported models of the Linksys router are all Linux based
+versions as per the table below. Tested models include a (T) at the end of
+the line.  <p>
+<div style="font-size: 14px; padding-left: 50px;">
+<a href="http://www.linksysinfo.org">WRT54G Models</a><br/>
+<div style="font-size: 12px; padding-left: 20px; font-style: italic;">
+CDF0 = WRT54G v1.0 / ADM6996L Chipset / CPU 125Mhz  <br/>
+CDF1 = WRT54G v1.0 / ADM6996L Chipset / CPU 125Mhz  <br/>
+CDF2 = WRT54G v1.1 / ADM6996L Chipset / CPU 125Mhz  <br/>
+CDF3 = WRT54G v1.1 / ADM6996L Chipset / CPU 125Mhz  <br/>
+CDF5 = WRT54G v2.0 / ADM6996L Chipset / CPU 200Mhz     (T) <br/>
+CDF7 = WRT54G v2.2 / BCM5325EKQM Chipset / CPU 200Mhz  (T) <br/>
+CDF8 = WRT54G v3.0 / BCM5325EKQM Chipset / CPU 200Mhz  (T) <br/>
+CDF9 = WRT54G v3.1 / BCM5325EKQM Chipset / CPU 200Mhz  (T) <br/>
+CDFA = WRT54G v4.0 / BCM5352E Chipset / CPU 200Mhz     (T)
+<p>
+<div style="font-style:normal">Note: WRT54G v5.0 has 2Mb/8Mb RAM. It uses VxWorks OS and is incompatible with 3rd party 
+firmware and SMesh.</div>
+</div>
+
+WRT54GL<br/>
+<div style="font-size: 12px; padding-left: 20px; font-style: italic;">
+CL7A = WRT54GL / BCM5352E Chipset / CPU 200Mhz         (T)
+</div>
+
+WRT54GS<br/>
+<div style="font-size: 12px; padding-left: 20px; font-style: italic;">
+CGN0 = WRT54GS v1.0 / ADM6996L Chipset / CPU 200Mhz  <br/>
+CGN1 = WRT54GS v1.0 / ADM6996L Chipset / CPU 200Mhz  <br/>
+CGN2 = WRT54GS v1.1 / BCM5325EKQM Chipset / CPU 200Mhz  <br/>
+CGN3 = WRT54GS v2.0 / BCM5325EKQM Chipset / CPU 200Mhz  <br/>
+CGN4 = WRT54GS v2.1 / BCM5325EKQM Chipset / CPU 200Mhz  <br/>
+CGN5 = WRT54GS v3.0 / BCM5352E Chipset / CPU 200Mhz  <br/>
+CGN6 = WRT54GS v4.0 / BCM5352E Chipset / CPU 200Mhz  <br/>
+</div>
+</div>
+
+<!--#include virtual="footer.html" -->
+		</div>
+	</td>
+	</tr>
+</table>
+
+</body>
+</html>

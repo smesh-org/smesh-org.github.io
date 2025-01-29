@@ -1,0 +1,314 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+
+<head>
+<style type='text/css'>
+body {
+/*        font-family: 'Lucida Grande',Geneva,Arial,Verdana,sans-serif;*/
+        font-family: Verdana,arial,sans-serif;
+        font-size: 12px;
+        background: #FFFFFF;
+		margin-left: 20px;
+}
+
+pre {
+	margin-left: 50px;
+	margin-right: 50px;
+	padding: 10px;
+	background: #DDDDDD;
+}
+</style>
+    <title>SMesh on Meraki</title>
+    <meta name="KEYWORDS" content="mesh, smesh, meraki, openwrt, kamikaze"/>
+</head>
+
+<body>
+<h1>SMesh on Meraki</h1>
+This is step-by-step tutorial on how to run SMesh on <a href="http://meraki.com">Meraki</a>.
+<h2>1. Flashing the Meraki</h2>
+Download the roofs and kernel images from <a href="http://openwrt.org">OpenWrt</a> website. The latest stable version of Kamikaze is <a href="http://downloads.openwrt.org/kamikaze/7.09/">7.09</a>:
+<pre>
+ral@dell1:~$ <strong>mkdir meraki</strong>
+ral@dell1:~$ <strong>cd meraki</strong>
+ral@dell1:~/meraki$ <strong>wget http://downloads.openwrt.org/kamikaze/7.09/atheros-2.6/openwrt-atheros-2.6-root.jffs2-64k</strong>
+ral@dell1:~/meraki$ <strong>wget http://downloads.openwrt.org/kamikaze/7.09/atheros-2.6/openwrt-atheros-2.6-vmlinux.gz</strong>
+ral@dell1:~/meraki$ <strong>wget http://download.berlin.freifunk.net/sven-ola/area51/ap51-flash</strong>
+ral@dell1:~/meraki$ <strong>ls -la</strong>
+total 2728
+drwxr-xr-x  2 ral ral    4096 Apr 11 16:18 .
+drwxr-xr-x 34 ral ral    4096 Apr 11 16:19 ..
+-rw-r--r--  1 ral ral   22620 Aug  3  2007 ap51-flash
+-rw-r--r--  1 ral ral 1703936 Sep 30  2007 openwrt-atheros-2.6-root.jffs2-64k
+-rw-r--r--  1 ral ral 1048576 Sep 30  2007 openwrt-atheros-2.6-vmlinux.gz
+ral@dell1:~/meraki$
+</pre>
+
+Assign the eth interface a static IP in 192.168.84.0/24 network:
+<pre>
+ral@dell1:~/meraki$ <strong>sudo ifconfig eth1 192.168.84.9 netmask 255.255.255.0</strong>
+</pre>
+
+The Meraki should be turned off now. Run the flasher:
+<pre>
+ral@dell1:~/meraki$ <strong>chmod a+x ap51-flash</strong>
+ral@dell1:~/meraki$ <strong>sudo ./ap51-flash eth1 openwrt-atheros-2.6-root.jffs2-64k openwrt-atheros-2.6-vmlinux.gz</strong>
+Reading rootfs file openwrt-atheros-2.6-root.jffs2-64k with 1703936 bytes...
+Reading kernel file openwrt-atheros-2.6-vmlinux.gz with 1048576 bytes...
+</pre>
+
+Now power on the Meraki. It will take about 10 minutes for this to finish:
+<pre>
+rootfs(0x006a0000) + kernel(0x00100000) + nvram(0x00000000) sums up to 0x007a0000 bytes
+Peer MAC: 00:18:0a:01:25:4e
+Peer IP : 192.168.84.1
+Your MAC: 00:ba:be:ca:ff:ee
+Your IP : 192.168.84.0
+Setting IP address...
+Loading rootfs...
+Sending rootfs, 3328 blocks...
+Initializing partitions...
+Flashing rootfs...
+Loading kernel...
+Sending kernel, 2048 blocks...
+Flashing kernel...
+Setting boot_script_data...
+Done. Restarting device...
+ral@dell1:~/meraki$
+</pre>
+
+In OpenWrt the default IP for eth is 192.168.1.1. So assign an IP in 192.168.1.0/24 network:
+<pre>
+ral@dell1:~/meraki$ <strong>sudo ifconfig eth1 192.168.1.10 netmask 255.255.255.0</strong>
+ral@dell1:~/meraki$ <strong>ping 192.168.1.1</strong>
+PING 192.168.1.1 (192.168.1.1) 56(84) bytes of data.
+64 bytes from 192.168.1.1: icmp_seq=1 ttl=64 time=0.949 ms
+64 bytes from 192.168.1.1: icmp_seq=2 ttl=64 time=1.17 ms
+64 bytes from 192.168.1.1: icmp_seq=3 ttl=64 time=1.00 ms
+
+--- 192.168.1.1 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2000ms
+rtt min/avg/max/mdev = 0.949/1.042/1.170/0.093 ms
+ral@dell1:~/meraki$
+</pre>
+
+Now we can connect to it. Telnet login is enabled by default, but once you change the root password, telnet is disabled and ssh is enabled:
+<pre>
+ral@dell1:~/meraki$ <strong>telnet 192.168.1.1</strong>
+Trying 192.168.1.1...
+Connected to 192.168.1.1.
+Escape character is '^]'.
+ === IMPORTANT ============================
+  Use 'passwd' to set your login password
+  this will disable telnet and enable SSH
+ ------------------------------------------
+
+
+BusyBox v1.4.2 (2007-09-29 07:21:40 CEST) Built-in shell (ash)
+Enter 'help' for a list of built-in commands.
+
+  _______                     ________        __
+ |       |.-----.-----.-----.|  |  |  |.----.|  |_
+ |   -   ||  _  |  -__|     ||  |  |  ||   _||   _|
+ |_______||   __|_____|__|__||________||__|  |____|
+          |__| W I R E L E S S   F R E E D O M
+KAMIKAZE (7.09) -----------------------------------
+  * 10 oz Vodka       Shake well with ice and strain
+  * 10 oz Triple sec  mixture into 10 shot glasses.
+  * 10 oz lime juice  Salute!
+ ---------------------------------------------------
+root@OpenWrt:/# <strong>passwd</strong>
+Changing password for root
+New password:
+Bad password: too weak
+Retype password:
+Password for root changed by root
+root@OpenWrt:/# <strong>exit</strong>
+Connection closed by foreign host.
+ral@dell1:~/meraki$ <strong>ssh root@192.168.1.1</strong>
+The authenticity of host '192.168.1.1 (192.168.1.1)' can't be established.
+RSA key fingerprint is b7:68:ff:65:95:d4:c5:89:5b:2c:c2:b2:b2:8e:53:9c.
+Are you sure you want to continue connecting (yes/no)? yes
+Warning: Permanently added '192.168.1.1' (RSA) to the list of known hosts.
+root@192.168.1.1's password:
+
+
+BusyBox v1.4.2 (2007-09-29 07:21:40 CEST) Built-in shell (ash)
+Enter 'help' for a list of built-in commands.
+
+  _______                     ________        __
+ |       |.-----.-----.-----.|  |  |  |.----.|  |_
+ |   -   ||  _  |  -__|     ||  |  |  ||   _||   _|
+ |_______||   __|_____|__|__||________||__|  |____|
+          |__| W I R E L E S S   F R E E D O M
+ KAMIKAZE (7.09) -----------------------------------
+  * 10 oz Vodka       Shake well with ice and strain
+  * 10 oz Triple sec  mixture into 10 shot glasses.
+  * 10 oz lime juice  Salute!
+ ---------------------------------------------------
+root@OpenWrt:~#
+</pre>
+
+If everything went ok, you should see this:
+<pre>
+root@OpenWrt:~# <strong>ls -la</strong>
+drwxrwxrwt    8 root     root          240 Jan  1 00:01 .
+drwxr-xr-x   15 root     root            0 Jan  1  1970 ..
+-rwx------    1 root     root            0 Jan  1 00:00 .failsafe
+-rwx------    1 root     root            4 Jan  1 00:01 .switch2jffs
+-rw-r--r--    1 root     root            0 Jan  1 00:00 dhcp.leases
+drwxr-xr-x    2 root     root           40 Jan  1 00:01 dropbear
+drwxr-xr-x    2 root     root           40 Jan  1 00:00 lock
+drwxr-xr-x    2 root     root           80 Jan  1 00:00 log
+-rw-r--r--    1 root     root           21 Jan  1 00:00 resolv.conf
+drwxr-xr-x    2 root     root           80 Jan  1 00:01 run
+drwxr-xr-x    3 root     root           60 Jan  1 00:00 spool
+drwxr-xr-x    2 root     root           60 Jan  1 00:00 state
+root@OpenWrt:~# <strong>df -h</strong>
+Filesystem                Size      Used Available Use% Mounted on
+/dev/mtdblock1            6.6M      1.8M      4.8M  27% /
+none                     14.6M     20.0k     14.6M   0% /tmp
+tmpfs                   512.0k         0    512.0k   0% /dev
+</pre>
+
+<h2>2. Basic settings</h2>
+
+We need Internet connection to update some packages. Change the default IP to one in your network or to DHCP by editing the /etc/config/network file. Mine looks like this:
+
+<pre>
+root@OpenWrt:~# <strong>cat /etc/config/network</strong>
+# Copyright (C) 2006 OpenWrt.org
+
+config interface loopback
+        option ifname   lo
+        option proto    static
+        option ipaddr   127.0.0.1
+        option netmask  255.0.0.0
+
+config interface lan
+        option ifname   eth0
+        option proto    dhcp
+
+#config interface lan
+#       option ifname   eth0
+#       option type     bridge
+#       option proto    static
+#       option ipaddr   192.168.1.1
+#       option netmask  255.255.255.0
+</pre>
+
+Plug the Internet cable. Reboot the Meraki and ssh into it. Now we can update the packages list:
+<pre>
+root@OpenWrt:~# <strong>ipkg update</strong>
+Downloading http://downloads.openwrt.org/kamikaze/7.09/atheros-2.6/packages/Packages
+Updated list of available packages in /usr/lib/ipkg/lists/release
+Downloading http://downloads.openwrt.org/kamikaze/packages/mips/Packages
+Updated list of available packages in /usr/lib/ipkg/lists/packages
+Done.
+</pre>
+
+Install ip and iptables-mod-ipopt packages.. They are required for running SMesh:
+<pre>
+root@OpenWrt:~# <strong>ipkg install ip iptables-mod-ipopt</strong>
+Installing ip (2.6.20-070313-1) to root...
+Downloading http://downloads.openwrt.org/kamikaze/7.09/atheros-2.6/packages/./ip_2.6.20-070313-1_mips.ipk
+Installing iptables-mod-ipopt (1.3.7-1) to root...
+Downloading http://downloads.openwrt.org/kamikaze/7.09/atheros-2.6/packages/./iptables-mod-ipopt_1.3.7-1_mips.ipk
+Installing kmod-ipt-ipopt (2.6.21.5-atheros-1) to root...
+Downloading http://downloads.openwrt.org/kamikaze/7.09/atheros-2.6/packages/./kmod-ipt-ipopt_2.6.21.5-atheros-1_mips.ipk
+Configuring ip
+Configuring iptables-mod-ipopt
+Configuring kmod-ipt-ipopt
+Done.
+root@OpenWrt:~#
+</pre>
+
+
+<h2>3. Running SMesh</h2>
+
+First we're going to configure the wireless interface. Here is a simple script for setting the interface in adhoc mode (as required by SMesh):
+
+<pre>
+root@OpenWrt:/smesh# <strong>cat /smesh/smesh-up</strong>
+wlanconfig ath0 create wlandev wifi0 wlanmode adhoc
+iwconfig ath0 essid smesh_net300
+iwconfig ath0 channel 11
+iwconfig ath0
+ifconfig ath0 10.0.11.123 netmask 255.0.0.0
+ifconfig ath0
+</pre>
+
+Run smesh-up. It prints the output of 'ifconfig ath0' and 'iwconfig ath0':
+<pre>
+root@OpenWrt:/smesh# <strong>./smesh-up</strong>
+ath0
+ath0      IEEE 802.11b  ESSID:"smesh_net300"  Nickname:""
+          Mode:Ad-Hoc  Frequency:2.462 GHz  Cell: Not-Associated
+          Bit Rate:0 kb/s   Tx-Power:0 dBm   Sensitivity=1/1
+          Retry:off   RTS thr:off   Fragment thr:off
+          Encryption key:off
+          Power Management:off
+          Link Quality=0/70  Signal level=-256 dBm  Noise level=-256 dBm
+          Rx invalid nwid:0  Rx invalid crypt:0  Rx invalid frag:0
+          Tx excessive retries:0  Invalid misc:0   Missed beacon:0
+
+ath0      Link encap:Ethernet  HWaddr 06:18:0A:01:25:4E
+          inet addr:10.0.11.123  Bcast:10.255.255.255  Mask:255.0.0.0
+          UP BROADCAST RUNNING MULTICAST  MTU:1500  Metric:1
+          RX packets:1 errors:0 dropped:0 overruns:0 frame:0
+          TX packets:0 errors:0 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:0
+          RX bytes:82 (82.0 B)  TX bytes:0 (0.0 B)
+</pre>
+
+Scp the smesh binaries and config files to /smesh:
+<pre>
+root@OpenWrt:/smesh# <strong>ls -la</strong>
+drwxr-xr-x    2 root     root            0 Jan  1 00:05 .
+drwxr-xr-x   16 root     root            0 Jan  1  1970 ..
+-rwxr-xr-x    1 root     root        11410 Jan  1 00:04 runSmesh
+-rwxr-xr-x    1 root     root          183 Jan  1 00:03 smesh-up
+-rwxr-xr-x    1 root     root         4747 Jan  1 00:04 smesh.conf
+-rwxr-xr-x    1 root     root       364780 Jan  1 00:04 smesh_proxy
+-rwxr-xr-x    1 root     root       332112 Jan  1 00:04 spines
+</pre>
+
+Edit /smesh/smesh.conf. MESHIF should be ath0 (or whatever interface you set in smesh-up script). For the Internet gateway Meraki the WANIF should be eth0.<br/>
+Edit /smesh/runSmesh and change . /jffs/smesh.conf to . /smesh/smesh.conf. <br/>
+Finally, run /smesh/runSmesh script. If everything goes ok, spines and smesh_proxy processes should be running:
+<pre>
+root@OpenWrt:/smesh# <strong>./runSmesh</strong>
+root@OpenWrt:/smesh# <strong>ps</strong>
+  PID  Uid     VmSize Stat Command
+    1 root        396 S   init
+    2 root            SWN [ksoftirqd/0]
+    3 root            SW< [events/0]
+    4 root            SW< [khelper]
+    5 root            SW< [kthread]
+   17 root            SW< [kblockd/0]
+   28 root            SW  [pdflush]
+   29 root            SW  [pdflush]
+   30 root            SW< [kswapd0]
+   31 root            SW< [aio/0]
+   41 root            SW  [mtdblockd]
+  150 root            SWN [jffs2_gcd_mtd1]
+  157 root        404 S   logger -s -p 6 -t
+  159 root        244 S   init
+  166 root        336 S   syslogd -C16
+  169 root        288 S   klogd
+  177 root        268 S   /sbin/hotplug2 --override --persistent --max-children 1 --no-coldplug
+  330 root        220 S   udhcpc -t 0 -i eth0 -b -p /var/run/eth0.pid -R
+  404 root        332 S   crond -c /etc/crontabs
+  408 root        328 S   /usr/sbin/dropbear -p 22
+  415 root        172 S   httpd -p 80 -h /www -r OpenWrt
+  429 root        560 R   /usr/sbin/dropbear -p 22
+  430 root        572 S   -ash
+  568 root        308 S   /usr/sbin/dropbear -p 722
+  592 root        688 S   <strong>/smesh/spines</strong> -l 10.0.11.123 -p 8120 -k 0 -k 1 -W -M 6
+  645 root        648 S   <strong>/smesh/smesh_proxy</strong> -p 8120 -k 1 -mesh_if ath0 -m arp -bht 3 -uht 3 -max 20 -ts 0.2 -df 0.2 -dhcp 120
+ -igw_if eth0 -dns 128.220.221.1 -dns 127.0.0.1
+  650 root        408 R   ps
+</pre>
+<h2>4. Troubleshooting</h2>
+If you have problems or questions please contact me at <a href='mailto:ralucam@cs.jhu.edu'>ralucam@cs.jhu.edu</a> (Raluca Musaloiu-E.).
+</body>
+</html>
